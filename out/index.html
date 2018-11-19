@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>gsv-calendar</title>
+	<script src="scripts.js"></script>
+	<style>
+		body {
+			color: #444;
+			background: white;
+		}
+		input[type=number] {
+			text-align: right;
+			width: 5em;
+			margin-left: 1em;
+		}
+		.invalid {
+			background: #faa;
+		}
+		table.calendar {
+			border-collapse: collapse;
+			margin: 1em 0;
+		}
+		.calendar td, .calendar th {
+			border: #444 1px solid;
+			width: 3em;
+			height: 3em;
+			text-align: center;
+			user-select: none;
+		}
+		.calendar td:not(.empty):not(.selected):hover {
+			background: #ccf;
+		}
+		.calendar td.selected {
+			background: #444;
+			color: white;
+		}
+		.calendar td.empty {
+			border: none;
+		}
+		.calendar th {
+			border: none;
+			font-weight: normal;
+		}
+	</style>
+</head>
+<body>
+	<div id="container"></div>
+</body>
+</html>
