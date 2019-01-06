@@ -88,7 +88,7 @@ export default class CalendarClockComponent extends React.PureComponent<Calendar
 		let timeIsValid = clock.isValidTime(this.props.time);
 
 		return (<div>
-			{calendar.name}: {dateTimeText} <br/>
+			<span className="calendar-title">{calendar.name}: {dateTimeText}</span><br/>
 
 			<input
 				type="number" value={this.props.date[0]}
