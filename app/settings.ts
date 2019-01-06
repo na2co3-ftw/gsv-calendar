@@ -1,6 +1,8 @@
 import Calendar from "./calendar";
 import Clock from "./clock";
 import CalendarClock from "./calendar-clock";
+import {ClockTranslator} from "./clock-translator";
+import {CalendarClockTranslator} from "./calendar-clock-translator";
 
 const sinteeaCalendar = new Calendar({
 	name: "シンテーア暦",
@@ -35,7 +37,7 @@ const sinteeaClock = new Clock([
 	{name: "秒", count: 72},
 ]);
 
-export const sinteeaCalendarClock = new CalendarClock(sinteeaCalendar, sinteeaClock);
+const sinteeaCalendarClock = new CalendarClock(sinteeaCalendar, sinteeaClock);
 
 
 const gaalunCalendar = new Calendar({
@@ -73,9 +75,9 @@ const gaalunClock = new Clock([
 	{name: "秒", count: 64, start: 1},
 ]);
 
-export const gaalunCalendarClock = new CalendarClock(gaalunCalendar,gaalunClock);
+const gaalunCalendarClock = new CalendarClock(gaalunCalendar,gaalunClock);
 
-/*
+
 const gregorioCalendar = new Calendar({
 	name: "グレゴリオ暦",
 	units: [
@@ -107,27 +109,26 @@ const gregorioClock = new Clock([
 	{name: "秒", count: 60},
 ]);
 
-export const gregorioCalendarClock = new CalendarClock(gregorioCalendar, gregorioClock);
+const gregorioCalendarClock = new CalendarClock(gregorioCalendar, gregorioClock);
 
-const melCalendar = new Calendar({
-	name: "メル暦",
-	units: [
-		{name: "年", count: null, start: 0},
-		{name: "月", count: 14, start: 1},
-		{name: "日", count: 28, start: 1}
-	],
-	adds: [
-		[null, 14, {add: -27}],
-		[{mod: 4}, 14, {add: 1}],
-		[{mod: 100}, 14, {add: -1}],
-		[{mod: 400}, 14, {add: 1}]
-	],
-	week: {
-		modOfDay: 7,
-		start: 0,
-		customFormat: ["闇", "水", "風", "土", "火", "雷", "光"]
-	}
-});
 
-export const melCalendarClock = new CalendarClock(melCalendar, gregorioClock);
-*/
+export const gsvClockTranslator = new ClockTranslator([
+	{clock: sinteeaClock, factor: 1.23819931, reference: gregorioClock},
+	{clock: gaalunClock, factor: 4.7956278515625, reference: gregorioClock}
+]);
+
+export const gsvTranslator = new CalendarClockTranslator([
+	[
+		{calendar: sinteeaCalendarClock, date: [1623, 2, 1], time: [4, 10, 70]},
+		{calendar: gaalunCalendarClock, date: [3379, 5, 2, 5], time: [2, 2, 8, 10]}
+	], [
+		{calendar: sinteeaCalendarClock, date: [1738, 12, 9], time: [11, 49, 11]},
+		{calendar: gregorioCalendarClock, date: [2157, 12, 16], time: [9, 0, 0]}
+	]
+], gsvClockTranslator);
+
+export const gsvCalendarClocks = [
+	sinteeaCalendarClock,
+	gaalunCalendarClock,
+	gregorioCalendarClock
+];

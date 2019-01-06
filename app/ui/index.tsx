@@ -1,121 +1,88 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import {gaalunCalendarClock, sinteeaCalendarClock} from "../settings";
+import {gsvCalendarClocks, gsvTranslator} from "../settings";
 import CalendarClockComponent from "./calendar-clock-component";
 
 document.addEventListener("DOMContentLoaded", () => {
 	ReactDOM.render(<App/>, document.getElementById("container"));
 });
 
-const gaalunSecondByEarthSecond = 4.7956278515625;
-const sinteeaSecondByEarthSecond = 1.23819931;
-const sinteeaGaalunDifference =
-	gaalunCalendarClock.dateTimeToSeconds([3379, 5, 2, 5], [2, 2, 8, 10]) * gaalunSecondByEarthSecond
-	- sinteeaCalendarClock.dateTimeToSeconds([1623, 2, 1], [4, 10, 70]) * sinteeaSecondByEarthSecond;
-
 interface AppState {
-	sinteeaDate: number[],
-	sinteeaTime: number[],
-	gaalunDate: number[],
-	gaalunTime: number[],
-}
-
-function sinteeaToGaalun(date: number[], time: number[]): {date: number[], time: number[]} {
-	const s = sinteeaCalendarClock.dateTimeToSeconds(date, time) * sinteeaSecondByEarthSecond;
-	const gaalunSeconds = Math.floor((s + sinteeaGaalunDifference) / gaalunSecondByEarthSecond + 0.5);
-	return gaalunCalendarClock.secondsToDateTime(gaalunSeconds);
-}
-
-function gaalunToSinteea(date: number[], time: number[]): {date: number[], time: number[]} {
-	const s = gaalunCalendarClock.dateTimeToSeconds(date, time) * gaalunSecondByEarthSecond;
-	const sinteeaSeconds = Math.floor((s - sinteeaGaalunDifference) / sinteeaSecondByEarthSecond + 0.5);
-	return sinteeaCalendarClock.secondsToDateTime(sinteeaSeconds);
+	dateTimes: {date: number[], time: number[]}[];
 }
 
 class App extends React.PureComponent<any, AppState> {
 	constructor(props: any) {
 		super(props);
 
-		const sinteeaDate = sinteeaCalendarClock.calendar.getEpochDate();
-		const sinteeaTime = sinteeaCalendarClock.clock.getStartTime();
-		const {date: gaalunDate, time: gaalunTime} = sinteeaToGaalun(sinteeaDate, sinteeaTime);
-
 		this.state = {
-			sinteeaDate, sinteeaTime,
-			gaalunDate, gaalunTime
+			dateTimes: this.calculateDateTimes(
+				0,
+				gsvCalendarClocks[0].calendar.getEpochDate(),
+				gsvCalendarClocks[0].clock.getStartTime()
+			)
 		};
-
-		this.onChangeSinteeaDate = this.onChangeSinteeaDate.bind(this);
-		this.onChangeSinteeaTime = this.onChangeSinteeaTime.bind(this);
-		this.onChangeGaalunDate = this.onChangeGaalunDate.bind(this);
-		this.onChangeGaalunTime = this.onChangeGaalunTime.bind(this);
 	}
 
-	onChangeSinteeaDate(sinteeaDate: number[]) {
-		if (!sinteeaCalendarClock.calendar.isValidDate(sinteeaDate).all) {
-			this.setState({sinteeaDate});
-			return;
-		}
+	private onChangeDate(id: number): (date: number[]) => void {
+		return (date: number[]) => {
+			if (!gsvCalendarClocks[id].calendar.isValidDate(date).all) {
+				this.setState(state => {
+					const dateTimes = [...state.dateTimes];
+					dateTimes[id] = {date, time: dateTimes[id].time};
+					return {dateTimes};
+				});
+				return;
+			}
 
-		this.setState(state => {
-			const {date: gaalunDate, time: gaalunTime} = sinteeaToGaalun(sinteeaDate, state.sinteeaTime);
-			return {sinteeaDate, gaalunDate, gaalunTime};
-		});
+			this.setState(state => ({dateTimes: this.calculateDateTimes(id, date, state.dateTimes[id].time)}));
+		};
 	}
 
-	onChangeSinteeaTime(sinteeaTime: number[]) {
-		if (!sinteeaCalendarClock.clock.isValidTime(sinteeaTime).all) {
-			this.setState({sinteeaTime});
-			return;
-		}
+	private onChangeTime(id: number): (time: number[]) => void {
+		return (time: number[]) => {
+			if (!gsvCalendarClocks[id].clock.isValidTime(time).all) {
+				this.setState(state => {
+					const dateTimes = [...state.dateTimes];
+					dateTimes[id] = {date: dateTimes[id].date, time};
+					return {dateTimes};
+				});
+				return;
+			}
 
-		this.setState(state => {
-			const {date: gaalunDate, time: gaalunTime} = sinteeaToGaalun(state.sinteeaDate, sinteeaTime);
-			return {sinteeaTime, gaalunDate, gaalunTime};
-		});
+			this.setState(state => ({dateTimes: this.calculateDateTimes(id, state.dateTimes[id].date, time)}));
+		};
 	}
 
-	onChangeGaalunDate(gaalunDate: number[]) {
-		if (!gaalunCalendarClock.calendar.isValidDate(gaalunDate).all) {
-			this.setState({gaalunDate});
-			return;
+	private calculateDateTimes(id: number, date: number[], time: number[]): {date: number[], time: number[]}[] {
+		let dateTimes: {date: number[], time: number[]}[] = [];
+		dateTimes[id] = {date, time};
+		let seconds = gsvCalendarClocks[id].dateTimeToSeconds(date, time);
+
+		for (let i = 0; i < gsvCalendarClocks.length; i++) {
+			if (i == id) continue;
+			const s = gsvTranslator.translateSeconds(seconds, gsvCalendarClocks[id], gsvCalendarClocks[i]);
+			dateTimes[i] = gsvCalendarClocks[i].secondsToDateTime(s);
 		}
-
-		this.setState(state => {
-			const {date: sinteeaDate, time: sinteeaTime} = gaalunToSinteea(gaalunDate, state.gaalunTime);
-			return {gaalunDate, sinteeaDate, sinteeaTime};
-		});
-	}
-
-	onChangeGaalunTime(gaalunTime: number[]) {
-		if (!gaalunCalendarClock.clock.isValidTime(gaalunTime).all) {
-			this.setState({gaalunTime});
-			return;
-		}
-
-		this.setState(state => {
-			const {date: sinteeaDate, time: sinteeaTime} = gaalunToSinteea(state.gaalunDate, gaalunTime);
-			return {gaalunTime, sinteeaDate, sinteeaTime};
-		});
+		return dateTimes;
 	}
 
 	render() {
-		return (<div>
-			<CalendarClockComponent
-				calendarClock={sinteeaCalendarClock}
-				date={this.state.sinteeaDate}
-				time={this.state.sinteeaTime}
-				onChangeDate={this.onChangeSinteeaDate}
-				onChangeTime={this.onChangeSinteeaTime}
-			/>
-			<hr/>
-			<CalendarClockComponent
-				calendarClock={gaalunCalendarClock}
-				date={this.state.gaalunDate}
-				time={this.state.gaalunTime}
-				onChangeDate={this.onChangeGaalunDate}
-				onChangeTime={this.onChangeGaalunTime}
-			/>
-		</div>);
+		let components: React.ReactNode[] = [];
+		for (let i = 0; i < gsvCalendarClocks.length; i++) {
+			if (i != 0) {
+				components.push(<hr key={`${i}hr`}/>);
+			}
+			components.push(<CalendarClockComponent
+				key={i}
+				calendarClock={gsvCalendarClocks[i]}
+				date={this.state.dateTimes[i].date}
+				time={this.state.dateTimes[i].time}
+				onChangeDate={this.onChangeDate(i)}
+				onChangeTime={this.onChangeTime(i)}
+			/>);
+		}
+
+		return (<div>{components}</div>);
 	}
 }
