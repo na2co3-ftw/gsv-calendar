@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import {gsvCalendarClocks, gsvTranslator} from "../settings";
-import CalendarClockComponent from "./calendar-clock-component";
+import {gsvTimeSystems, gsvTranslator} from "../settings";
+import TimeSystemComponent from "./time-system-component";
 
 document.addEventListener("DOMContentLoaded", () => {
 	ReactDOM.render(<App/>, document.getElementById("container"));
@@ -18,15 +18,15 @@ class App extends React.PureComponent<any, AppState> {
 		this.state = {
 			dateTimes: this.calculateDateTimes(
 				0,
-				gsvCalendarClocks[0].calendar.getEpochDate(),
-				gsvCalendarClocks[0].clock.getStartTime()
+				gsvTimeSystems[0].calendar.getEpochDate(),
+				gsvTimeSystems[0].clock.getStartTime()
 			)
 		};
 	}
 
 	private onChangeDate(id: number): (date: number[]) => void {
 		return (date: number[]) => {
-			if (!gsvCalendarClocks[id].calendar.isValidDate(date).all) {
+			if (!gsvTimeSystems[id].calendar.isValidDate(date).all) {
 				this.setState(state => {
 					const dateTimes = [...state.dateTimes];
 					dateTimes[id] = {date, time: dateTimes[id].time};
@@ -41,7 +41,7 @@ class App extends React.PureComponent<any, AppState> {
 
 	private onChangeTime(id: number): (time: number[]) => void {
 		return (time: number[]) => {
-			if (!gsvCalendarClocks[id].clock.isValidTime(time).all) {
+			if (!gsvTimeSystems[id].clock.isValidTime(time).all) {
 				this.setState(state => {
 					const dateTimes = [...state.dateTimes];
 					dateTimes[id] = {date: dateTimes[id].date, time};
@@ -57,25 +57,25 @@ class App extends React.PureComponent<any, AppState> {
 	private calculateDateTimes(id: number, date: number[], time: number[]): {date: number[], time: number[]}[] {
 		let dateTimes: {date: number[], time: number[]}[] = [];
 		dateTimes[id] = {date, time};
-		let seconds = gsvCalendarClocks[id].dateTimeToSeconds(date, time);
+		let seconds = gsvTimeSystems[id].dateTimeToSeconds(date, time);
 
-		for (let i = 0; i < gsvCalendarClocks.length; i++) {
+		for (let i = 0; i < gsvTimeSystems.length; i++) {
 			if (i == id) continue;
-			const s = gsvTranslator.translateSeconds(seconds, gsvCalendarClocks[id], gsvCalendarClocks[i]);
-			dateTimes[i] = gsvCalendarClocks[i].secondsToDateTime(s);
+			const s = gsvTranslator.translateSeconds(seconds, gsvTimeSystems[id], gsvTimeSystems[i]);
+			dateTimes[i] = gsvTimeSystems[i].secondsToDateTime(s);
 		}
 		return dateTimes;
 	}
 
 	render() {
 		let components: React.ReactNode[] = [];
-		for (let i = 0; i < gsvCalendarClocks.length; i++) {
+		for (let i = 0; i < gsvTimeSystems.length; i++) {
 			if (i != 0) {
 				components.push(<hr key={`${i}hr`}/>);
 			}
-			components.push(<CalendarClockComponent
+			components.push(<TimeSystemComponent
 				key={i}
-				calendarClock={gsvCalendarClocks[i]}
+				timeSystem={gsvTimeSystems[i]}
 				date={this.state.dateTimes[i].date}
 				time={this.state.dateTimes[i].time}
 				onChangeDate={this.onChangeDate(i)}

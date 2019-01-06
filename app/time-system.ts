@@ -1,7 +1,7 @@
 import Calendar from "./calendar";
 import Clock from "./clock";
 
-export default class CalendarClock {
+export default class TimeSystem {
 	constructor(public calendar: Calendar, public clock: Clock) {}
 
 	dateTimeToSeconds(date: number[], time: number[]): number {

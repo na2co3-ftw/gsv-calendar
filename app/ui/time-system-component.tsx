@@ -1,23 +1,23 @@
 import React, {RefObject} from "react";
 import CalendarDateTable from "./calendar-date-table";
-import CalendarClock from "../calendar-clock";
 import CalendarUnitTable from "./calendar-unit-table";
+import TimeSystem from "../time-system";
 import {WeekConfig} from "../calendar";
 
-interface CalendarClockComponentProps {
-	calendarClock: CalendarClock;
+interface TimeSystemComponentProps {
+	timeSystem: TimeSystem;
 	date: number[];
 	time: number[];
 	onChangeDate: (date: number[]) => void;
 	onChangeTime: (time: number[]) => void;
 }
 
-export default class CalendarClockComponent extends React.PureComponent<CalendarClockComponentProps> {
+export default class TimeSystemComponent extends React.PureComponent<TimeSystemComponentProps> {
 	private timeInputs: RefObject<HTMLInputElement>[] = [];
 
-	constructor(props: CalendarClockComponentProps) {
+	constructor(props: TimeSystemComponentProps) {
 		super(props);
-		for (let i = 0; i < this.props.calendarClock.clock.unitNum; i++) {
+		for (let i = 0; i < this.props.timeSystem.clock.unitNum; i++) {
 			this.timeInputs[i] = React.createRef();
 		}
 
@@ -45,15 +45,15 @@ export default class CalendarClockComponent extends React.PureComponent<Calendar
 
 	private onChangeTimeInput() {
 		let time = [];
-		for (let i = 0; i < this.props.calendarClock.clock.unitNum; i++) {
+		for (let i = 0; i < this.props.timeSystem.clock.unitNum; i++) {
 			time[i] = parseInt(this.timeInputs[i].current!.value, 10);
 		}
 		this.props.onChangeTime(time);
 	}
 
 	render() {
-		const calendar = this.props.calendarClock.calendar;
-		const clock = this.props.calendarClock.clock;
+		const calendar = this.props.timeSystem.calendar;
+		const clock = this.props.timeSystem.clock;
 
 		let dateTimeText = "";
 		for (let i = 0; i < calendar.unitNum; i++) {
