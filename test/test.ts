@@ -12,6 +12,16 @@ describe("Calendar", function () {
 			assert.deepStrictEqual(calendar.daysToDate(days), date);
 		});
 	}
+	function testValid(calendar: Calendar, date: number[]) {
+		it(`${date.join("/")} is valid`, function() {
+			assert.ok(calendar.isValidDate(date).all);
+		});
+	}
+	function testNotValid(calendar: Calendar, date: number[]) {
+		it(`${date.join("/")} is not valid`, function() {
+			assert.ok(!calendar.isValidDate(date).all);
+		});
+	}
 
 	describe("Simple Calendar", function() {
 		const simpleCalendar = new Calendar({
@@ -27,6 +37,10 @@ describe("Calendar", function () {
 		testDateAndDays(simpleCalendar, [0, 1, 1, 7], 6);
 		testDateAndDays(simpleCalendar, [1, 1, 1, 1], 12*4*7);
 		testDateAndDays(simpleCalendar, [1, 2, 3, 4], 12*4*7+4*7+2*7+3);
+		testValid(simpleCalendar, [0, 1, 1, 1]);
+		testValid(simpleCalendar, [0, 12, 4, 7]);
+		testNotValid(simpleCalendar, [0, 0, 1, 1]);
+		testNotValid(simpleCalendar, [0, 1, 1, 8]);
 	});
 
 	describe("Complex Calendar", function() {
@@ -53,6 +67,8 @@ describe("Calendar", function () {
 		testDateAndDays(complexCalendar, [0, 3, 1, 1], 2*4*7-1);
 		testDateAndDays(complexCalendar, [0, 4, 3, 1], 3*4*7+2*7-3);
 		testDateAndDays(complexCalendar, [1, 1, 1, 1], 12*4*7-3);
+		testValid(complexCalendar, [0, 2, 1, 9]);
+		testNotValid(complexCalendar, [0, 2, 4, 5]);
 	});
 
 	describe("Simple Calendar with Leap Years", function() {
@@ -88,5 +104,9 @@ describe("Calendar", function () {
 		testDateAndDays(leapCalendar, [35, 1, 1, 1], 35*12*4*7+23);
 		testDateAndDays(leapCalendar, [35, 4, 2, 1], 35*12*4*7+3*4*7+7+28);
 		testDateAndDays(leapCalendar, [36, 1, 1, 1], 36*12*4*7+28);
+		testNotValid(leapCalendar, [1, 2, 1, 8]);
+		testValid(leapCalendar, [5, 2, 1, 9]);
+		testNotValid(leapCalendar, [15, 2, 1, 8]);
+		testValid(leapCalendar, [35, 4, 1, 10]);
 	});
 });
