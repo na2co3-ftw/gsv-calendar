@@ -9,9 +9,14 @@ interface TimeSystemComponentProps {
 	time: number[];
 	onChangeDate: (date: number[]) => void;
 	onChangeTime: (time: number[]) => void;
+	initialCollapsed?: boolean;
 }
 
-export default class TimeSystemComponent extends React.PureComponent<TimeSystemComponentProps> {
+interface TimeSystemComponentState {
+	collapsed: boolean;
+}
+
+export default class TimeSystemComponent extends React.PureComponent<TimeSystemComponentProps, TimeSystemComponentState> {
 	private timeInputs: RefObject<HTMLInputElement>[] = [];
 
 	constructor(props: TimeSystemComponentProps) {
@@ -19,11 +24,16 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 		for (let i = 0; i < this.props.timeSystem.clock.unitNum; i++) {
 			this.timeInputs[i] = React.createRef();
 		}
+		this.state = {
+			collapsed: typeof props.initialCollapsed != "undefined" ? props.initialCollapsed : true
+		};
 
 		this.onChangeYearInput = this.onChangeYearInput.bind(this);
 		this.onChangeTimeInput = this.onChangeTimeInput.bind(this);
 		this.onClickCalendarUnit = this.onClickCalendarUnit.bind(this);
 		this.onClickCalendarDay = this.onClickCalendarDay.bind(this);
+		this.open = this.open.bind(this);
+		this.close = this.close.bind(this);
 	}
 
 	private onChangeYearInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -48,6 +58,14 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 			time[i] = parseInt(this.timeInputs[i].current!.value, 10);
 		}
 		this.props.onChangeTime(time);
+	}
+
+	private open() {
+		this.setState({collapsed: false});
+	}
+
+	private close() {
+		this.setState({collapsed: true});
 	}
 
 	render() {
@@ -86,31 +104,41 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 
 		let timeIsValid = clock.isValidTime(this.props.time);
 
-		return (<div>
-			<span className="calendar-title">{calendar.name}: {dateTimeText}</span><br/>
+		const title = <span className="calendar-title">{calendar.name}: {dateTimeText}</span>;
 
-			<input
-				type="number" value={this.props.date[0]}
-				onChange={this.onChangeYearInput}
-			/>{calendar.unitsName[0]}
+		if (this.state.collapsed) {
+			return (<div>
+				{title}
+				<button onClick={this.open}>開く</button>
+			</div>);
+		} else {
+			return (<div>
+				{title}
+				<button onClick={this.close}>閉じる</button><br/>
 
-			{unitTables}
-
-			<CalendarDateTable
-				calendar={calendar}
-				date={this.props.date}
-				onClick={this.onClickCalendarDay}
-			/>
-
-			{clock.units.map((unit, i) => [
 				<input
-					type="number" value={this.props.time[i]}
-					className={timeIsValid.units[i] ? "": "invalid"}
-					key={i}
-					onChange={this.onChangeTimeInput}
-					ref={this.timeInputs[i]}
-				/>, unit.name
-			])}
-		</div>);
+					type="number" value={this.props.date[0]}
+					onChange={this.onChangeYearInput}
+				/>{calendar.unitsName[0]}
+
+				{unitTables}
+
+				<CalendarDateTable
+					calendar={calendar}
+					date={this.props.date}
+					onClick={this.onClickCalendarDay}
+				/>
+
+				{clock.units.map((unit, i) => [
+					<input
+						type="number" value={this.props.time[i]}
+						className={timeIsValid.units[i] ? "" : "invalid"}
+						key={i}
+						onChange={this.onChangeTimeInput}
+						ref={this.timeInputs[i]}
+					/>, unit.name
+				])}
+			</div>);
+		}
 	}
 }

@@ -80,6 +80,7 @@ class App extends React.PureComponent<any, AppState> {
 				time={this.state.dateTimes[i].time}
 				onChangeDate={this.onChangeDate(i)}
 				onChangeTime={this.onChangeTime(i)}
+				initialCollapsed={i != 0}
 			/>);
 		}
 
