@@ -18,7 +18,7 @@ export default class CalendarUnitTable extends React.PureComponent<CalendarUnitT
 	}
 
 	private renderCell(key: number, value: number): React.ReactNode {
-		let text = this.props.calendar.formatDateUnit(this.props.unit, value) +
+		let text = this.props.calendar.formatUnit(this.props.unit, value) +
 			this.props.calendar.unitsName[this.props.unit];
 
 		if (value == this.props.value) {
@@ -32,7 +32,7 @@ export default class CalendarUnitTable extends React.PureComponent<CalendarUnitT
 
 		const dummyDate: number[] = [];
 		dummyDate.length = this.props.calendar.unitNum;
-		const range = calendar.getRangeOfUnit(this.props.unit, dummyDate)!;
+		const range = calendar.getUnitRange(this.props.unit, dummyDate)!;
 
 		let cells: React.ReactNode[] = [];
 

@@ -78,8 +78,4 @@ export default class Clock {
 			units: unitsValid,
 		};
 	}
-
-	getStartTime(): number[] {
-		return this.units.map(unit => unit.start || 0);
-	}
 }

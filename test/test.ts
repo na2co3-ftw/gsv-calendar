@@ -16,13 +16,12 @@ describe("Calendar", function () {
 	describe("Simple Calendar", function() {
 		const simpleCalendar = new Calendar({
 			name: "Simple Calendar",
-			units: [
-				{name: "year", count: null, start: 0},
+			year: "year",
+			middleUnits: [
 				{name: "month", count: 12, start: 1},
-				{name: "week", count: 4, start: 1},
-				{name: "day", count: 7, start: 1},
+				{name: "week", count: 4, start: 1}
 			],
-			week: null
+			day: {name: "day", count: 7, start: 1}
 		});
 		testDateAndDays(simpleCalendar, [0, 1, 1, 1], 0);
 		testDateAndDays(simpleCalendar, [0, 1, 1, 7], 6);
@@ -33,18 +32,19 @@ describe("Calendar", function () {
 	describe("Complex Calendar", function() {
 		const complexCalendar = new Calendar({
 			name: "Complex Calendar",
-			units: [
-				{name: "year", count: null, start: 0},
+			year: "year",
+			middleUnits: [
 				{name: "month", count: 12, start: 1},
-				{name: "week", count: 4, start: 1},
-				{name: "day", count: 7, start: 1},
+				{name: "week", count: 4, start: 1}
 			],
-			adds: [
-				[null, 2, 1, {add: 2}],
-				[null, 2, 4, {add: -3}],
-				[null, 4, 2, {add: -2}],
-			],
-			week: null
+			day: {
+				name: "day", count: 7, start: 1,
+				modify: [
+					{matchMiddle: [2, 1], count:9},
+					{matchMiddle: [2, 4], count:4},
+					{matchMiddle: [4, 2], count:5},
+				]
+			}
 		});
 		testDateAndDays(complexCalendar, [0, 2, 1, 1], 4*7);
 		testDateAndDays(complexCalendar, [0, 2, 1, 9], 4*7+8);
@@ -58,18 +58,19 @@ describe("Calendar", function () {
 	describe("Simple Calendar with Leap Years", function() {
 		const leapCalendar = new Calendar({
 			name: "Simple Calendar with Leap Years",
-			units: [
-				{name: "year", count: null, start: 0},
+			year: "year",
+			middleUnits: [
 				{name: "month", count: 12, start: 1},
-				{name: "week", count: 4, start: 1},
-				{name: "day", count: 7, start: 1},
+				{name: "week", count: 4, start: 1}
 			],
-			adds: [
-				[{mod: 5}, 2, 1, {add: 2}],
-				[{mod: 15}, 2, 1, {add: -2}],
-				[{mod: 7}, 4, 1, {add: 3}]
-			],
-			week: null
+			day: {
+				name: "day", count: 7, start: 1,
+				modify: [
+					{yearMod: 5, matchMiddle: [2, 1], count:9},
+					{yearMod: 15, matchMiddle: [2, 1], count:7},
+					{yearMod: 7, matchMiddle: [4, 1], count:10},
+				]
+			}
 		});
 		testDateAndDays(leapCalendar, [1, 1, 1, 1], 12*4*7+3);
 		testDateAndDays(leapCalendar, [5, 1, 1, 1], 5*12*4*7+3);

@@ -2,7 +2,6 @@ import React, {RefObject} from "react";
 import CalendarDateTable from "./calendar-date-table";
 import CalendarUnitTable from "./calendar-unit-table";
 import TimeSystem from "../time-system";
-import {WeekConfig} from "../calendar";
 
 interface TimeSystemComponentProps {
 	timeSystem: TimeSystem;
@@ -57,13 +56,13 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 
 		let dateTimeText = "";
 		for (let i = 0; i < calendar.unitNum; i++) {
-			dateTimeText += calendar.formatDateUnit(i, this.props.date[i]);
+			dateTimeText += calendar.formatUnit(i, this.props.date[i]);
 			dateTimeText += calendar.unitsName[i];
 			dateTimeText += " ";
 		}
 		let weekOfDay = calendar.getDayOfWeek(this.props.date);
 		if (weekOfDay != null) {
-			dateTimeText += `(${calendar.formatDayOfWeek(weekOfDay)}曜日) `;
+			dateTimeText += `(${calendar.formatDayOfWeek(weekOfDay)}${calendar.dayOfWeekName!}) `;
 		}
 		for (let i = 0; i < clock.unitNum; i++) {
 			dateTimeText += this.props.time[i] + clock.units[i].name;
@@ -72,7 +71,7 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 
 		let unitTables = [];
 		let unitTableEnd = calendar.unitNum - 1;
-		if (WeekConfig.isUnit(calendar.week)) {
+		if (calendar.representConfig.weekUnit) {
 			unitTableEnd--;
 		}
 		for (let i = 1; i < unitTableEnd; i++) {

@@ -1,59 +1,55 @@
+import isEqual from "lodash.isequal";
 import NumberFormat, {formatNumber} from "./number-format";
+
+/*
+ * Unit: year, month, day, and other components of the calendar
+ * Middle unit: unit excluding year and day
+ */
 
 interface CalendarConfig {
 	name: string;
-	units: UnitConfig[];
-	adds?: AddConfig[];
-	week: WeekConfig;
+	year: string;
+	middleUnits: UnitConfig[];
+	day: DayUnitConfig;
+	week?: WeekConfig;
+	represent?: CalendarRepresentConfig;
 }
 
 interface UnitConfig extends NumberFormat {
 	name: string;
-	count: number | null;
+	count: number;
 	start: number;
 }
 
-type AddConfig = (number | null | AddConfig.Mod | AddConfig.Add)[];
+interface DayUnitConfig extends UnitConfig {
+	modify?: DayUnitModify[]
+}
 
-namespace AddConfig {
-	export interface Mod {
-		mod: number;
-	}
-
-	export interface Add {
-		add: number;
-	}
-
-	export function isMod(a: any): a is AddConfig.Mod {
-		return a != null && a.hasOwnProperty("mod");
-	}
-
-	export function isAdd(a: any): a is AddConfig.Add {
-		return a != null && a.hasOwnProperty("add");
-	}
+interface DayUnitModify {
+	yearMod?: number;
+	matchMiddle: number[];
+	count: number;
 }
 
 export type WeekConfig =
-	WeekConfig.ModOfDay | WeekConfig.Cycle | WeekConfig.Unit | WeekConfig.Custom | null;
+	WeekConfig.ModOfDay | WeekConfig.Cycle | WeekConfig.Custom;
 
 export namespace WeekConfig {
 	export interface ModOfDay extends NumberFormat {
+		name: string;
 		modOfDay: number;
 		start: number;
 	}
 
 	export interface Cycle extends NumberFormat {
+		name: string;
 		cycle: number;
 		offset: number;
 		start: number;
 	}
 
-	export interface Unit {
-		unit: true;
-		max: number;
-	}
-
 	export interface Custom extends NumberFormat {
+		name: string;
 		custom: (date: number[], days: number | null) => number;
 		start: number;
 		max: number;
@@ -67,209 +63,187 @@ export namespace WeekConfig {
 		return a != null && a.hasOwnProperty("cycle");
 	}
 
-	export function isUnit(a: any): a is Unit {
-		return a != null && a.unit == true;
-	}
-
 	export function isCustom(a: any): a is Custom {
 		return a != null && a.hasOwnProperty("custom");
 	}
 }
 
+interface CalendarRepresentConfig {
+	weekUnit?: {max: number}
+}
+
+
+interface UnitInfo {
+	periods: UnitInfoPeriod[];
+	days: number;
+}
+
+interface UnitInfoPeriod {
+	offsetDays: number;
+	subPeriods?: UnitInfoPeriod[];
+}
+
 export default class Calendar {
 	public readonly name: string;
-	private readonly units: UnitConfig[];
-	private readonly unitsDays: number[];
-	private readonly adds: AddConfig[];
-	public readonly week: WeekConfig;
-
 	public readonly unitNum: number;
 	public readonly unitsName: string[];
+	public readonly hasDayOfWeek: boolean = false;
+	public readonly dayOfWeekName: string | null = null;
+	public readonly isContinuousDayOfWeek: boolean = false;
+	public readonly representConfig: CalendarRepresentConfig;
 
-	private readonly leapCycleY: number;
-	private readonly leapCycleDays: number;
-	private readonly leaps: {
-		modY: number,
-		add: number,
-		pos: number,
-	}[];
-	private readonly leapYToDaysTable: number[];
-	private readonly daysToDateTable: { days: number, date: number[] }[];
+	private middleUnits: UnitConfig[];
+	private dayUnit: DayUnitConfig;
+	private week: WeekConfig | undefined;
+
+	private yearMods: number[] = [];
+	private leapCycleYears: number;
+	private leapCycleDays: number;
+	private yearInCycleOffsetDays: number[] = [];
+
+	private unitInfoByLeapIndex: Map<number, UnitInfo> = new Map();
 
 	constructor(config: CalendarConfig) {
 		this.name = config.name;
-
-		if (config.units.length < 2) throw "!";
-		if (config.units[0].count != null) throw "!";
-		if (config.units.some((unit, i) => i != 0 && unit.count == null)) throw "!";
-		if (config.units[0].start != 0) throw "!";
-		if (config.units.some((unit, i) => i != 0 && unit.start != 1)) throw "!";
-		this.units = config.units;
-		this.unitNum = this.units.length;
-		this.unitsName = this.units.map(unit => unit.name);
-
-		this.unitsDays = [];
-		let d = 1;
-		for (let i = this.unitNum - 1; i >= 0; i--) {
-			this.unitsDays[i] = d;
-			if (i == 0) {
-				break;
-			}
-			d *= this.units[i].count!!;
-		}
-
-		this.adds = config.adds || [];
+		this.middleUnits = config.middleUnits;
+		this.dayUnit = config.day;
 		this.week = config.week;
+		this.representConfig = config.represent || {};
 
-		this.leapCycleY = 1;
-		for (const add of this.adds) {
-			if (add.length != this.unitNum) throw "!";
-			if (add.slice(1, -1).some(m => typeof m != "number")) throw "!";
+		this.unitNum = config.middleUnits.length + 2;
+		this.unitsName = [config.year, ...config.middleUnits.map(u => u.name), config.day.name];
+		if (WeekConfig.isModOfDay(config.week) || WeekConfig.isCycle(config.week)) {
+			this.hasDayOfWeek = true;
+			this.dayOfWeekName = config.week.name;
+			this.isContinuousDayOfWeek = true;
+		} else if (WeekConfig.isCustom(config.week)) {
+			this.hasDayOfWeek = true;
+			this.dayOfWeekName = config.week.name;
+		}
 
-			const addD = add[add.length - 1];
-			if (!AddConfig.isAdd(addD)) throw "!";
+		if (config.middleUnits.length == 0) throw "!";
 
-			const y = add[0];
-			if (y != null) {
-				if (AddConfig.isMod(y)) {
-					this.leapCycleY = lcm(this.leapCycleY, y.mod);
-				} else {
-					throw "!";
-				}
+		this.leapCycleYears = 1;
+		if (config.day.modify) {
+			for (const mod of config.day.modify) {
+				if (typeof mod.yearMod == "undefined") continue;
+				this.yearMods.push(mod.yearMod);
+				this.leapCycleYears = lcm(this.leapCycleYears, mod.yearMod);
+			}
+		}
+
+		let offsetDays = 0;
+		for (let yearInCycle = 0; yearInCycle < this.leapCycleYears; yearInCycle++) {
+			this.yearInCycleOffsetDays[yearInCycle] = offsetDays;
+
+			const leapIndex = this.getLeapIndex(yearInCycle);
+			let unitInfo = this.unitInfoByLeapIndex.get(leapIndex);
+			if (typeof unitInfo == "undefined") {
+				unitInfo = this.generateUnitInfo(0, [], yearInCycle);
+				this.unitInfoByLeapIndex.set(leapIndex, unitInfo);
+			}
+			offsetDays += unitInfo.days;
+		}
+		this.leapCycleDays = offsetDays;
+	}
+
+	private generateUnitInfo(i: number, middle: number[], year?: number): UnitInfo {
+		let periods: UnitInfoPeriod[] = [];
+		let days = 0;
+		for (let val = 0; val < this.middleUnits[i].count; val++) {
+			let deltaDays;
+			let subPeriods;
+			if (i + 1 < this.middleUnits.length) {
+				const subInfo = this.generateUnitInfo(i + 1, [...middle, val + this.middleUnits[i].start], year);
+				subPeriods = subInfo.periods;
+				deltaDays = subInfo.days;
 			} else {
-				this.unitsDays[0] += addD.add;
-			}
-		}
-
-		this.daysToDateTable = [];
-		let dates: number[][] = [[0]];
-		for (let unit = 1; unit < this.unitNum - 1; unit++) {
-			let newDates: number[][] = [];
-			for (let i = 0; i < dates.length; i++) {
-				for (let c = this.units[unit].start; c <= this.units[unit].count!; c++) {
-					newDates.push([...dates[i], c]);
+				deltaDays = this.dayUnit.count;
+				if (middle.length + 1 == this.middleUnits.length && this.dayUnit.modify) {
+					const newMiddle = [...middle, val + this.middleUnits[i].start];
+					for (const mod of this.dayUnit.modify) {
+						if (typeof mod.yearMod != "undefined") {
+							if (typeof year == "undefined" || year % mod.yearMod != 0) continue;
+						}
+						if (isEqual(mod.matchMiddle, newMiddle)) {
+							deltaDays = mod.count;
+						}
+					}
 				}
 			}
-			dates = newDates;
+			periods[val] = {
+				offsetDays: days,
+				subPeriods
+			};
+			days += deltaDays;
 		}
-		for (let i = 0; i < dates.length; i++) {
-			const date = [...dates[i], this.units[this.unitNum - 1].start];
-			this.daysToDateTable.push({
-				days: this.dateToDaysInY(date, true),
-				date
-			});
-		}
+		return {periods, days};
+	}
 
-		this.leaps = [];
-		for (const add of this.adds) {
-			const addD = add[add.length - 1];
-			if (!AddConfig.isAdd(addD)) throw "!";
-
-			const y = add[0];
-			if (AddConfig.isMod(y)) {
-				const normalMaxDay = this.maxDayAt(add.slice() as number[], true);
-				const pos = this.dateToDaysInY([0, ...add.slice(1, -1) as number[], this.units[this.unitNum - 1].start], true);
-				this.leaps.push({
-					modY: y.mod,
-					add: addD.add,
-					pos: Math.min(pos, pos + addD.add)
-				});
+	private getLeapIndex(year: number): number {
+		let leapIndex = 1;
+		for (const mod of this.yearMods) {
+			if (year % mod == 0) {
+				leapIndex = lcm(leapIndex, mod);
 			}
 		}
-		this.leaps.sort((a, b) => a.pos - b.pos);
-
-		this.leapCycleDays = this.leapCycleY * this.unitsDays[0];
-		for (const {modY, add} of this.leaps) {
-			this.leapCycleDays += this.leapCycleY / modY * add;
-		}
-
-		this.leapYToDaysTable = [];
-		for (let i = 0; i < this.leapCycleY; i++) {
-			this.leapYToDaysTable[i] = this.leapYToDays(i);
-		}
+		return leapIndex;
 	}
 
 	dateToDays(date: number[]): number {
 		if (date.length != this.unitNum) throw "!";
-		let days = 0;
-		days += this.leapYToDays(date[0] - this.units[0].start);
-		days += this.dateToDaysInY(date, false);
+
+		const cycle = Math.floor(date[0] / this.leapCycleYears);
+		const yearInCycle = date[0] - cycle * this.leapCycleYears;
+
+		let days = cycle * this.leapCycleDays;
+		days += this.yearInCycleOffsetDays[yearInCycle];
+
+		const leapIndex = this.getLeapIndex(yearInCycle);
+		let periods = this.unitInfoByLeapIndex.get(leapIndex)!.periods;
+		for (let i = 0; i < this.middleUnits.length; i++) {
+			const val = date[i + 1] - this.middleUnits[i].start;
+			days += periods[val].offsetDays;
+			periods = periods[val].subPeriods!;
+		}
+
+		days += date[this.unitNum - 1] - this.dayUnit.start;
 		return days;
 	}
 
-	private leapYToDays(y: number): number {
-		let days = 0;
-		days += y * this.unitsDays[0];
-		for (const {modY, add} of this.leaps) {
-			days += Math.ceil(y / modY) * add;
-		}
-		return days;
-	}
+	daysToDate(days: number): number[] {
+		let date: number[] = [];
+		const cycle = Math.floor(days / this.leapCycleDays);
+		date[0] = cycle * this.leapCycleYears;
+		days -= cycle * this.leapCycleDays;
 
-	private dateToDaysInY(date: number[], ignoreY: boolean): number {
-		let days = 0;
-
-		for (let i = 1; i < this.unitNum; i++) {
-			days += (date[i] - this.units[i].start) * this.unitsDays[i];
-		}
-
-		for (const add of this.adds) {
-			const y = add[0];
-			if (AddConfig.isMod(y)) {
-				if (ignoreY || date[0] % y.mod != 0) {
-					continue;
-				}
+		let yearInCycle = 0;
+		for (; yearInCycle < this.leapCycleYears; yearInCycle++) {
+			if (this.yearInCycleOffsetDays[yearInCycle] > days) {
+				break;
 			}
-			for (let i = 1; i < this.unitNum - 1; i++) {
-				if (date[i] > add[i]!) {
-					days += (add[add.length - 1] as AddConfig.Add).add;
+		}
+		yearInCycle--;
+		date[0] += yearInCycle;
+		days -= this.yearInCycleOffsetDays[yearInCycle];
+
+		const leapIndex = this.getLeapIndex(yearInCycle);
+		let periods = this.unitInfoByLeapIndex.get(leapIndex)!.periods;
+		for (let i = 0; i < this.middleUnits.length; i++) {
+			let val = 1;
+			for (; val < periods.length; val++) {
+				if (periods[val].offsetDays > days) {
 					break;
 				}
-				if (date[i] < add[i]!) {
-					break;
-				}
 			}
+			val--;
+			date[i + 1] = val + this.middleUnits[i].start;
+			days -= periods[val].offsetDays;
+			periods = periods[val].subPeriods!;
 		}
 
-		return days;
-	}
-
-	private maxDayAt(date: number[], ignoreY: boolean): number {
-		let maxD = this.units[this.unitNum - 1].count!!;
-		for (const add of this.adds) {
-			const y = add[0];
-			if (AddConfig.isMod(y)) {
-				if (ignoreY || date[0] % y.mod != 0) {
-					continue;
-				}
-			}
-			if (add.slice(1, -1).every((m, i) => date[i + 1] == m)) {
-				maxD += (add[add.length - 1] as AddConfig.Add).add;
-			}
-		}
-		return maxD;
-	}
-
-	getRangeOfUnit(num: number, date: number[]): {start: number, end: number} | null {
-		if (date.length != this.unitNum) {
-			throw "!";
-		}
-		if (num >= this.unitNum || num < 0) {
-			throw "!";
-		}
-		if (num == 0) {
-			return null;
-		}
-		if (num < this.unitNum - 1) {
-			return {
-				start: this.units[num].start,
-				end: this.units[num].count! + this.units[num].start - 1,
-			};
-		}
-		return {
-			start: this.units[num].start,
-			end: this.maxDayAt(date, false)
-		};
+		date[this.unitNum - 1] = days + this.dayUnit.start;
+		return date;
 	}
 
 	isValidDate(date: number[]): { all: boolean, units: boolean[] } {
@@ -277,26 +251,26 @@ export default class Calendar {
 		let valid = true;
 		let unitsValid: boolean[] = [];
 
-		for (let i = 0; i < this.unitNum - 1; i++) {
-			if (Number.isNaN(date[i])) {
+		if (Number.isNaN(date[0])) {
+			unitsValid[0] = false;
+			valid = false;
+		}
+
+		for (let i = 0; i < this.middleUnits.length; i++) {
+			const val = date[i + 1] - this.middleUnits[i].start;
+			if (Number.isNaN(val) || val < 0 || this.middleUnits[i].count <= val) {
 				unitsValid[i] = false;
-			} else if (i != 0) {
-				unitsValid[i] = this.units[i].start <= date[i] && date[i] <= this.units[i].count!!;
-			} else {
-				unitsValid[i] = true;
-			}
-			if (!unitsValid[i]) {
 				valid = false;
 			}
 		}
 
-		let maxD = this.maxDayAt(date, false);
-		const d = date[date.length - 1];
-		const dValid = !Number.isNaN(d) && this.units[this.unitNum - 1].start <= d && d <= maxD;
-		if (!dValid) {
+		const dayUnitNum = this.unitNum - 1;
+		const day = date[dayUnitNum];
+		const dayRange = this.getUnitRange(dayUnitNum, date)!;
+		if (Number.isNaN(day) || day < dayRange.start || dayRange.end < day) {
+			unitsValid[dayUnitNum] = false;
 			valid = false;
 		}
-		unitsValid[this.unitNum - 1] = dValid;
 
 		return {
 			all: valid,
@@ -304,45 +278,48 @@ export default class Calendar {
 		};
 	}
 
-	daysToDate(days: number): number[] {
-		const leapCycle = Math.floor(days / this.leapCycleDays);
-		days -= leapCycle * this.leapCycleDays;
-		let y = 0;
-		for (; y < this.leapCycleY; y++) {
-			if (this.leapYToDaysTable[y] > days) {
-				break;
-			}
+	getUnitRange(unit: number, date: number[]): {start: number, end: number} | null {
+		if (date.length != this.unitNum)  throw "!";
+		if (unit >= this.unitNum) throw "!";
+		if (unit == 0) {
+			return null;
 		}
-		y--;
+		if (unit - 1 < this.middleUnits.length) {
+			const unitConfig = this.middleUnits[unit - 1];
+			return {
+				start: unitConfig.start,
+				end: unitConfig.count + unitConfig.start - 1,
+			};
+		}
 
-		const daysInY = days - this.leapYToDaysTable[y];
-		let normalizedDaysInY = daysInY;
-		for (const {modY, add, pos} of this.leaps) {
-			if (y % modY != 0) {
-				continue;
-			}
-			if (normalizedDaysInY > pos) {
-				if (add > 0 && normalizedDaysInY <= pos + add) {
-					normalizedDaysInY = pos;
-				} else {
-					normalizedDaysInY -= add;
+		let dayCount = this.dayUnit.count;
+		if (this.dayUnit.modify) {
+			const year = date[0];
+			const middle = date.slice(1, -1);
+			for (const mod of this.dayUnit.modify) {
+				if (typeof mod.yearMod != "undefined") {
+					if (year % mod.yearMod != 0) continue;
 				}
-			} else if (normalizedDaysInY < pos) {
-				break;
+				if (isEqual(mod.matchMiddle, middle)) {
+					dayCount = mod.count;
+				}
 			}
 		}
+		return {
+			start: this.dayUnit.start,
+			end: dayCount + this.dayUnit.start - 1
+		};
+	}
 
-		let i = 0;
-		for (; i < this.daysToDateTable.length; i++) {
-			if (this.daysToDateTable[i].days > normalizedDaysInY) {
-				break;
-			}
+	formatUnit(unit: number, value: number): string {
+		if (unit >= this.unitNum) throw "!";
+		if (unit == 0) {
+			return value.toString();
 		}
-
-		let date = this.daysToDateTable[i - 1].date.slice();
-		date[0] = y + leapCycle * this.leapCycleY + this.units[0].start;
-		date[this.unitNum - 1] += daysInY - this.dateToDaysInY([...date, this.units[this.unitNum - 1].start], false);
-		return date;
+		if (unit - 1 < this.middleUnits.length) {
+			return formatNumber(this.middleUnits[unit - 1], value);
+		}
+		return formatNumber(this.dayUnit, value);
 	}
 
 	getDayOfWeek(date: number[], days: number | null = null): number | null {
@@ -358,19 +335,33 @@ export default class Calendar {
 			return this.week.custom(date, days);
 		}
 		if (WeekConfig.isModOfDay(this.week)) {
-			return (date[this.unitNum - 1] - this.units[this.unitNum - 1].start) % this.week.modOfDay
+			return (date[this.unitNum - 1] - this.dayUnit.start) % this.week.modOfDay
 				+ this.week.start;
 		}
 		return null;
 	}
 
-	getEpochDate(): number[] {
-		return this.units.map(unit => unit.start);
-	}
-
-	formatDateUnit(unit: number, value: number): string {
-		if (unit >= this.unitNum) throw "!";
-		return formatNumber(this.units[unit], value);
+	// Returns not null if this.getDayOfWeek() returns not null
+	getDayOfWeekRange(): {start: number, end: number} | null {
+		if (WeekConfig.isCycle(this.week)) {
+			return {
+				start: this.week.start,
+				end: this.week.cycle + this.week.start - 1
+			};
+		}
+		if (WeekConfig.isCustom(this.week)) {
+			return {
+				start: this.week.start,
+				end: this.week.max
+			};
+		}
+		if (WeekConfig.isModOfDay(this.week)) {
+			return {
+				start: this.week.start,
+				end: this.week.modOfDay + this.week.start - 1
+			};
+		}
+		return null;
 	}
 
 	// Returns not null if this.getDayOfWeek() returns not null

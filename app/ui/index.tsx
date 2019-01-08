@@ -18,8 +18,8 @@ class App extends React.PureComponent<any, AppState> {
 		this.state = {
 			dateTimes: this.calculateDateTimes(
 				0,
-				gsvTimeSystems[0].calendar.getEpochDate(),
-				gsvTimeSystems[0].clock.getStartTime()
+				gsvTimeSystems[0].calendar.daysToDate(0),
+				gsvTimeSystems[0].clock.secondsToTime(0)
 			)
 		};
 	}

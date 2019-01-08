@@ -34,91 +34,55 @@ export default class CalendarDateTable extends React.PureComponent<CalendarDateT
 		const calendar = this.props.calendar;
 		const date = this.props.date;
 
-		const dayRange = calendar.getRangeOfUnit(calendar.unitNum - 1, date)!;
+		const dayRange = calendar.getUnitRange(calendar.unitNum - 1, date)!;
 
 		let calendarRows: React.ReactNode[] = [];
-		if (WeekConfig.isModOfDay(calendar.week)) {
+		if (calendar.isContinuousDayOfWeek) {
+			const dayOfWeekRange = calendar.getDayOfWeekRange()!;
+			const firstDate = [...date.slice(0, -1), dayRange.start];
+			const firstDayOfWeek = calendar.getDayOfWeek(firstDate)! - dayOfWeekRange.start;
+
 			let calendarCells: React.ReactNode[] = [];
-			let row = 0;
-			let column = 0;
+			let week = 0;
+			let dayOfWeek = dayOfWeekRange.start;
+			for (; dayOfWeek < firstDayOfWeek; dayOfWeek++) {
+				calendarCells.push(this.renderEmptyCell(dayOfWeek));
+			}
 			for (let day = dayRange.start; day <= dayRange.end; day++) {
-				calendarCells.push(this.renderCell(column, [...date.slice(0, -1), day]));
-				column++;
-				if (column == calendar.week.modOfDay) {
-					calendarRows.push(<tr key={row}>{calendarCells}</tr>);
+				calendarCells.push(this.renderCell(dayOfWeek, [...date.slice(0, -1), day]));
+				if (dayOfWeek == dayOfWeekRange.end) {
+					calendarRows.push(<tr key={week}>{calendarCells}</tr>);
 					calendarCells = [];
-					column = 0;
-					row++;
+					dayOfWeek = dayOfWeekRange.start;
+					week++;
+				} else {
+					dayOfWeek++;
 				}
 			}
 			if (calendarCells.length > 0) {
-				for (; column < calendar.week.modOfDay; column++) {
-					calendarCells.push(this.renderEmptyCell(column));
-				}
-				calendarRows.push(<tr key={row}>{calendarCells}</tr>);
-			}
-		} else if (WeekConfig.isCycle(calendar.week)) {
-			let firstDate = date.slice();
-			firstDate[calendar.unitNum - 1] = dayRange.start;
-			const firstDay = calendar.getDayOfWeek(firstDate)! - calendar.week.start;
-
-			let calendarCells: React.ReactNode[] = [];
-			let row = 0;
-			let column = 0;
-			for (; column < firstDay; column++) {
-				calendarCells.push(this.renderEmptyCell(column));
-			}
-			for (let day = dayRange.start; day <= dayRange.end; day++) {
-				calendarCells.push(this.renderCell(column, [...date.slice(0, -1), day]));
-				column++;
-				if (column == calendar.week.cycle) {
-					calendarRows.push(<tr key={row}>{calendarCells}</tr>);
-					calendarCells = [];
-					column = 0;
-					row++;
-				}
-			}
-			if (calendarCells.length > 0) {
-				for (; column < calendar.week.cycle; column++) {
-					calendarCells.push(this.renderEmptyCell(column));
-				}
-				calendarRows.push(<tr key={row}>{calendarCells}</tr>);
-			}
-		} else if (WeekConfig.isUnit(calendar.week)) {
-			const weekUnit = calendar.unitNum - 2;
-			const weekRange = calendar.getRangeOfUnit(weekUnit, date)!;
-			const dateFragment = date.slice(0, -2);
-			for (let week = weekRange.start; week <= weekRange.end; week++) {
-				const dayRange = calendar.getRangeOfUnit(calendar.unitNum - 1, [...dateFragment, week, 0])!;
-				let calendarCells: React.ReactNode[] = [];
-				calendarCells.push(<th key={-1}>{calendar.formatDateUnit(weekUnit, week) + calendar.unitsName[weekUnit]}</th>);
-
-				for (let day = dayRange.start; day <= calendar.week.max; day++) {
-					if (day <= dayRange.end) {
-						calendarCells.push(this.renderCell(day, [...dateFragment, week, day]));
-					} else {
-						calendarCells.push(this.renderEmptyCell(day));
-					}
+				for (; dayOfWeek <= dayOfWeekRange.end; dayOfWeek++) {
+					calendarCells.push(this.renderEmptyCell(dayOfWeek));
 				}
 				calendarRows.push(<tr key={week}>{calendarCells}</tr>);
 			}
-		} else if (WeekConfig.isCustom(calendar.week)) {
-			let curDate = date.slice();
-			let prevDayOfWeek = calendar.week.start - 1;
+		} else if (calendar.hasDayOfWeek) {
+			const dayOfWeekRange = calendar.getDayOfWeekRange()!;
+			let curDate = [...date];
+			let prevDayOfWeek = dayOfWeekRange.start - 1;
 			let calendarCells: React.ReactNode[] = [];
-			let row = 0;
+			let week = 0;
 			for (let day = dayRange.start; day <= dayRange.end; day++) {
 				curDate[calendar.unitNum - 1] = day;
 				const dayOfWeek = calendar.getDayOfWeek(curDate)!;
 
 				if (prevDayOfWeek >= dayOfWeek) {
-					for (let d = prevDayOfWeek + 1; d <= calendar.week.max; d++) {
+					for (let d = prevDayOfWeek + 1; d <= dayOfWeekRange.end; d++) {
 						calendarCells.push(this.renderEmptyCell(d));
 					}
-					calendarRows.push(<tr key={row}>{calendarCells}</tr>);
+					calendarRows.push(<tr key={week}>{calendarCells}</tr>);
 					calendarCells = [];
-					row++;
-					prevDayOfWeek = calendar.week.start - 1;
+					week++;
+					prevDayOfWeek = dayOfWeekRange.start - 1;
 				}
 				prevDayOfWeek++;
 				while (prevDayOfWeek < dayOfWeek) {
@@ -129,17 +93,36 @@ export default class CalendarDateTable extends React.PureComponent<CalendarDateT
 				calendarCells.push(this.renderCell(dayOfWeek, [...curDate]));
 			}
 			if (calendarCells.length > 0) {
-				for (let d = prevDayOfWeek + 1; d <= calendar.week.max; d++) {
+				for (let d = prevDayOfWeek + 1; d <= dayOfWeekRange.end; d++) {
 					calendarCells.push(this.renderEmptyCell(d));
 				}
-				calendarRows.push(<tr key={row}>{calendarCells}</tr>);
+				calendarRows.push(<tr key={week}>{calendarCells}</tr>);
+			}
+		} else if (calendar.representConfig.weekUnit) {
+			const weekUnit = calendar.unitNum - 2;
+			const weekRange = calendar.getUnitRange(weekUnit, date)!;
+			const maxDayOfWeek = calendar.representConfig.weekUnit.max;
+			const dateFragment = date.slice(0, -2);
+			for (let week = weekRange.start; week <= weekRange.end; week++) {
+				const dayRange = calendar.getUnitRange(calendar.unitNum - 1, [...dateFragment, week, 0])!;
+				let calendarCells: React.ReactNode[] = [];
+				calendarCells.push(<th key={-1}>{calendar.formatUnit(weekUnit, week) + calendar.unitsName[weekUnit]}</th>);
+
+				for (let day = dayRange.start; day <= maxDayOfWeek; day++) {
+					if (day <= dayRange.end) {
+						calendarCells.push(this.renderCell(day, [...dateFragment, week, day]));
+					} else {
+						calendarCells.push(this.renderEmptyCell(day));
+					}
+				}
+				calendarRows.push(<tr key={week}>{calendarCells}</tr>);
 			}
 		} else {
 			let calendarCells: React.ReactNode[] = [];
 			for (let day = dayRange.start; day <= dayRange.end; day++) {
 				calendarCells.push(this.renderCell(day, [...date.slice(0, -1), day]));
 			}
-			calendarRows.push(<tr>{calendarCells}</tr>);
+			calendarRows.push(<tr key={0}>{calendarCells}</tr>);
 		}
 
 		return (<table className="calendar">

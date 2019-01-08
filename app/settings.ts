@@ -6,24 +6,27 @@ import {TimeSystemTranslator} from "./time-system-translator";
 
 const sinteeaCalendar = new Calendar({
 	name: "シンテーア暦",
-	units: [
-		{name: "年", count: null, start: 0},
-		{name: "月", count: 16, start: 1},
-		{name: "日", count: 21, start: 1}
+	year: "年",
+	middleUnits: [
+		{name: "月", count: 16, start: 1}
 	],
-	adds: [
-		[{mod: 6}, 6, {add: 1}],
-		[null, 8, {add: 1}],
-		[null, 16, {add: 1}]
-	],
+	day: {
+		name: "日", count: 21, start: 1,
+		modify: [
+			{yearMod: 6, matchMiddle: [6], count: 22},
+			{matchMiddle: [8], count: 22},
+			{matchMiddle: [16], count: 22}
+		],
+	},
 	week: {
+		name: "曜日",
 		custom: (date: number[]) => {
 			const m = date[1];
 			const d = date[2];
 			if (d == 22) {
 				return 7;
 			}
-			return (((m - 1) % 2) * 21 + d - 1) % 6 + 1;
+			return ((m - 1) * 21 + d - 1) % 6 + 1;
 		},
 		start: 1,
 		max: 7,
@@ -42,29 +45,30 @@ const sinteeaSystem = new TimeSystem(sinteeaCalendar, sinteeaClock);
 
 const gaalunCalendar = new Calendar({
 	name: "ガールン暦",
-	units: [
-		{name: "年", count: null, start: 0},
+	year: "年",
+	middleUnits: [
 		{name: "月", count: 8, start: 1,
 			customFormat: ["上1", "上2", "上3", "上4", "下1", "下2", "下3", "下4"]
 		},
-		{name: "週", count: 4, start: 1},
-		{name: "日", count: 8, start: 1}
+		{name: "週", count: 4, start: 1}
 	],
-	adds: [
-		[null, 1, 4, {add: -1}],
-		[null, 2, 2, {add: -1}],
-		[null, 3, 3, {add: -1}],
-		[null, 4, 4, {add: -1}],
-		[{mod: 5}, 4, 4, {add: 1}],
-		[null, 5, 1, {add: -1}],
-		[null, 5, 4, {add: -1}],
-		[null, 6, 2, {add: -1}],
-		[null, 6, 4, {add: -1}],
-		[{mod: 86}, 6, 4, {add: 1}]
-	],
-	week: {
-		unit: true,
-		max: 8
+	day: {
+		name: "日", count: 8, start: 1,
+		modify: [
+			{matchMiddle: [1, 4], count: 7},
+			{matchMiddle: [2, 2], count: 7},
+			{matchMiddle: [3, 3], count: 7},
+			{matchMiddle: [4, 4], count: 7},
+			{yearMod: 5, matchMiddle: [4, 4], count: 8},
+			{matchMiddle: [5, 1], count: 7},
+			{matchMiddle: [5, 4], count: 7},
+			{matchMiddle: [6, 2], count: 7},
+			{matchMiddle: [6, 4], count: 7},
+			{yearMod: 86, matchMiddle: [6, 4], count: 8}
+		],
+	},
+	represent: {
+		weekUnit: {max: 8}
 	}
 });
 
@@ -80,22 +84,25 @@ const gaalunSystem = new TimeSystem(gaalunCalendar, gaalunClock);
 
 const gregorianCalendar = new Calendar({
 	name: "グレゴリオ暦",
-	units: [
-		{name: "年", count: null, start: 0},
-		{name: "月", count: 12, start: 1},
-		{name: "日", count: 31, start: 1}
+	year: "年",
+	middleUnits: [
+		{name: "月", count: 12, start: 1}
 	],
-	adds: [
-		[null, 2, {add: -3}],
-		[{mod: 4}, 2, {add: 1}],
-		[{mod: 100}, 2, {add: -1}],
-		[{mod: 400}, 2, {add: 1}],
-		[null, 4, {add: -1}],
-		[null, 6, {add: -1}],
-		[null, 9, {add: -1}],
-		[null, 11, {add: -1}]
-	],
+	day: {
+		name: "日", count: 31, start: 1,
+		modify: [
+			{matchMiddle: [2], count: 28},
+			{yearMod: 4, matchMiddle: [2], count: 29},
+			{yearMod: 100, matchMiddle: [2], count: 28},
+			{yearMod: 400, matchMiddle: [2], count: 29},
+			{matchMiddle: [4], count: 30},
+			{matchMiddle: [6], count: 30},
+			{matchMiddle: [9], count: 30},
+			{matchMiddle: [11], count: 30}
+		],
+	},
 	week: {
+		name: "曜日",
 		cycle: 7,
 		offset: 6,
 		start: 0,
