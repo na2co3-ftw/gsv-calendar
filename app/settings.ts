@@ -119,9 +119,48 @@ const earthClock = new Clock([
 const gregorianSystem = new TimeSystem(gregorianCalendar, earthClock);
 
 
+const lapeaCalendar = new Calendar({
+	name: "ラペア暦",
+	year: "年",
+	middleUnits: [
+		{name: "月", count: 9, start: 0},
+	],
+	day: {
+		name: "日", count: 33, start: 1,
+		modify: [
+			{matchMiddle: [0], count: 0, start: 0},
+			{yearMod: 100, matchMiddle: [0], count: 1},
+			{matchMiddle: [2], count: 34},
+			{matchMiddle: [4], count: 34},
+			{matchMiddle: [6], count: 34},
+			{matchMiddle: [8], count: 34}
+		]
+	},
+	week: {
+		name: "曜日",
+		cycle: 8,
+		offset: 0,
+		start: 0,
+		customFormat: ["黄", "橙", "緑", "黒", "紫", "青", "赤", "白"]
+	},
+	represent: {
+		hasEmptyUnit: true
+	}
+});
+
+const lapeaClock = new Clock([
+	{name: "時", count: 12},
+	{name: "分", count: 100},
+	{name: "秒", count: 64},
+]);
+
+const lapeaSystem = new TimeSystem(lapeaCalendar, lapeaClock);
+
+
 const gsvClockTranslator = new ClockTranslator([
 	{clock: sinteeaClock, factor: 1.23819931, reference: earthClock},
-	{clock: gaalunClock, factor: 4.7956278515625, reference: earthClock}
+	{clock: gaalunClock, factor: 4.7956278515625, reference: earthClock},
+	{clock: lapeaClock, factor: 73458.81 / 76800, reference: earthClock}
 ]);
 
 export const gsvTranslator = new TimeSystemTranslator([
@@ -131,11 +170,15 @@ export const gsvTranslator = new TimeSystemTranslator([
 	], [
 		{system: sinteeaSystem, date: [1738, 12, 9], time: [11, 49, 11]},
 		{system: gregorianSystem, date: [2157, 12, 16], time: [9, 0, 0]}
+	], [
+		{system: sinteeaSystem, date: [1707, 6, 10], time: [11, 31, 26]},
+		{system: lapeaSystem, date: [3672, 3, 14], time: [0, 0, 0]},
 	]
 ], gsvClockTranslator);
 
 export const gsvTimeSystems = [
 	sinteeaSystem,
 	gaalunSystem,
-	gregorianSystem
+	gregorianSystem,
+	lapeaSystem
 ];

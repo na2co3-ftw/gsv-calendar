@@ -78,7 +78,7 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 			unitTables.push(<CalendarUnitTable
 				calendar={calendar}
 				unit={i}
-				value={this.props.date[i]}
+				date={this.props.date}
 				onClick={this.onClickCalendarUnit}
 				key={i}
 			/>);

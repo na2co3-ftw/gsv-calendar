@@ -21,14 +21,18 @@ interface UnitConfig extends NumberFormat {
 	start: number;
 }
 
-interface DayUnitConfig extends UnitConfig {
+interface DayUnitConfig {
+	name: string;
+	count: number;
+	start: number;
 	modify?: DayUnitModify[]
 }
 
 interface DayUnitModify {
 	yearMod?: number;
 	matchMiddle: number[];
-	count: number;
+	count?: number;
+	start?: number;
 }
 
 export type WeekConfig =
@@ -69,7 +73,8 @@ export namespace WeekConfig {
 }
 
 interface CalendarRepresentConfig {
-	weekUnit?: {max: number}
+	weekUnit?: {max: number},
+	hasEmptyUnit?: boolean
 }
 
 
@@ -94,6 +99,7 @@ export default class Calendar {
 
 	private middleUnits: UnitConfig[];
 	private dayUnit: DayUnitConfig;
+	private hasModifiedDayUnitStart: boolean = false;
 	private week: WeekConfig | undefined;
 
 	private yearMods: number[] = [];
@@ -126,6 +132,9 @@ export default class Calendar {
 		this.leapCycleYears = 1;
 		if (config.day.modify) {
 			for (const mod of config.day.modify) {
+				if (typeof mod.start != "undefined") {
+					this.hasModifiedDayUnitStart = true;
+				}
 				if (typeof mod.yearMod == "undefined") continue;
 				this.yearMods.push(mod.yearMod);
 				this.leapCycleYears = lcm(this.leapCycleYears, mod.yearMod);
@@ -147,7 +156,7 @@ export default class Calendar {
 		this.leapCycleDays = offsetDays;
 	}
 
-	private generateUnitInfo(i: number, middle: number[], year?: number): UnitInfo {
+	private generateUnitInfo(i: number, middle: number[], year: number): UnitInfo {
 		let periods: UnitInfoPeriod[] = [];
 		let days = 0;
 		for (let val = 0; val < this.middleUnits[i].count; val++) {
@@ -158,18 +167,7 @@ export default class Calendar {
 				subPeriods = subInfo.periods;
 				deltaDays = subInfo.days;
 			} else {
-				deltaDays = this.dayUnit.count;
-				if (middle.length + 1 == this.middleUnits.length && this.dayUnit.modify) {
-					const newMiddle = [...middle, val + this.middleUnits[i].start];
-					for (const mod of this.dayUnit.modify) {
-						if (typeof mod.yearMod != "undefined") {
-							if (typeof year == "undefined" || year % mod.yearMod != 0) continue;
-						}
-						if (isEqual(mod.matchMiddle, newMiddle)) {
-							deltaDays = mod.count;
-						}
-					}
-				}
+				deltaDays = this.getModifiedDayUnit([year, ...middle, val + this.middleUnits[i].start]).count;
 			}
 			periods[val] = {
 				offsetDays: days,
@@ -178,6 +176,29 @@ export default class Calendar {
 			days += deltaDays;
 		}
 		return {periods, days};
+	}
+
+	private getModifiedDayUnit(date: number[]): {count: number, start: number} {
+		let count = this.dayUnit.count;
+		let start = this.dayUnit.start;
+		if (this.dayUnit.modify) {
+			const year = date[0];
+			const middle = date.slice(1, this.middleUnits.length + 1);
+			for (const mod of this.dayUnit.modify) {
+				if (typeof mod.yearMod != "undefined") {
+					if (year % mod.yearMod != 0) continue;
+				}
+				if (isEqual(mod.matchMiddle, middle)) {
+					if (typeof mod.count != "undefined") {
+						count = mod.count;
+					}
+					if (typeof mod.start != "undefined") {
+						start = mod.start;
+					}
+				}
+			}
+		}
+		return {count, start};
 	}
 
 	private getLeapIndex(year: number): number {
@@ -207,7 +228,8 @@ export default class Calendar {
 			periods = periods[val].subPeriods!;
 		}
 
-		days += date[this.unitNum - 1] - this.dayUnit.start;
+		const dayUnit = this.hasModifiedDayUnitStart ? this.getModifiedDayUnit(date) : this.dayUnit;
+		days += date[this.unitNum - 1] - dayUnit.start;
 		return days;
 	}
 
@@ -242,7 +264,8 @@ export default class Calendar {
 			periods = periods[val].subPeriods!;
 		}
 
-		date[this.unitNum - 1] = days + this.dayUnit.start;
+		const dayUnit = this.hasModifiedDayUnitStart ? this.getModifiedDayUnit(date) : this.dayUnit;
+		date[this.unitNum - 1] = days + dayUnit.start;
 		return date;
 	}
 
@@ -265,9 +288,9 @@ export default class Calendar {
 		}
 
 		const dayUnitNum = this.unitNum - 1;
-		const day = date[dayUnitNum];
-		const dayRange = this.getUnitRange(dayUnitNum, date)!;
-		if (Number.isNaN(day) || day < dayRange.start || dayRange.end < day) {
+		const dayUnit = this.getModifiedDayUnit(date);
+		const day = date[dayUnitNum] - dayUnit.start;
+		if (Number.isNaN(day) || day < 0 || dayUnit.count <= day) {
 			unitsValid[dayUnitNum] = false;
 			valid = false;
 		}
@@ -292,22 +315,10 @@ export default class Calendar {
 			};
 		}
 
-		let dayCount = this.dayUnit.count;
-		if (this.dayUnit.modify) {
-			const year = date[0];
-			const middle = date.slice(1, -1);
-			for (const mod of this.dayUnit.modify) {
-				if (typeof mod.yearMod != "undefined") {
-					if (year % mod.yearMod != 0) continue;
-				}
-				if (isEqual(mod.matchMiddle, middle)) {
-					dayCount = mod.count;
-				}
-			}
-		}
+		const dayUnit = this.getModifiedDayUnit(date);
 		return {
-			start: this.dayUnit.start,
-			end: dayCount + this.dayUnit.start - 1
+			start: dayUnit.start,
+			end: dayUnit.count + dayUnit.start - 1
 		};
 	}
 
@@ -319,7 +330,7 @@ export default class Calendar {
 		if (unit - 1 < this.middleUnits.length) {
 			return formatNumber(this.middleUnits[unit - 1], value);
 		}
-		return formatNumber(this.dayUnit, value);
+		return value.toString();
 	}
 
 	getDayOfWeek(date: number[], days: number | null = null): number | null {
@@ -335,7 +346,8 @@ export default class Calendar {
 			return this.week.custom(date, days);
 		}
 		if (WeekConfig.isModOfDay(this.week)) {
-			return (date[this.unitNum - 1] - this.dayUnit.start) % this.week.modOfDay
+			const dayUnit = this.hasModifiedDayUnitStart ? this.getModifiedDayUnit(date) : this.dayUnit;
+			return (date[this.unitNum - 1] - dayUnit.start) % this.week.modOfDay
 				+ this.week.start;
 		}
 		return null;
