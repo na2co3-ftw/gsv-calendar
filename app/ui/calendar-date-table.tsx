@@ -119,10 +119,27 @@ export default class CalendarDateTable extends React.PureComponent<CalendarDateT
 			}
 		} else {
 			let calendarCells: React.ReactNode[] = [];
+			let row = 0;
+			let column = 0;
 			for (let day = dayRange.start; day <= dayRange.end; day++) {
-				calendarCells.push(this.renderCell(day, [...date.slice(0, -1), day]));
+				calendarCells.push(this.renderCell(column, [...date.slice(0, -1), day]));
+				column++;
+				if (column == 10) {
+					calendarRows.push(<tr key={row}>{calendarCells}</tr>);
+					calendarCells = [];
+					column = 0;
+					row++;
+				}
 			}
-			calendarRows.push(<tr key={0}>{calendarCells}</tr>);
+
+			if (calendarCells.length > 0) {
+				if (row > 0) {
+					for (; column < 10; column++) {
+						calendarCells.push(this.renderEmptyCell(column));
+					}
+				}
+				calendarRows.push(<tr key={row}>{calendarCells}</tr>);
+			}
 		}
 
 		return (<table className="calendar">
