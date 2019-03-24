@@ -1,4 +1,4 @@
-import Calendar, {WeekConfig} from "../calendar";
+import Calendar from "../calendar";
 import React from "react";
 
 interface CalendarDateTableProps {
