@@ -153,10 +153,35 @@ const lapeaClock = new Clock([
 const lapeaSystem = new TimeSystem("ラペア暦", lapeaCalendar, lapeaClock);
 
 
+const rofilnaCalendar = new Calendar({
+	year: "年",
+	middleUnits: [
+		{name: "月", count: 12, start: 1}
+	],
+	day: {
+		name: "日", count: 30, start: 1,
+		modify: [
+			{matchMiddle: [4], count: 28},
+			{yearMod: 3, matchMiddle: [4], count: 31},
+			{matchMiddle: [7], count: 28},
+			{matchMiddle: [12], count: 28},
+		],
+	}
+});
+
+const rofilnaClock = new Clock([
+	{name: "%", count: 100}
+]);
+
+const rofilnaOldSystem = new TimeSystem("ロフィルナ旧暦", rofilnaCalendar, rofilnaClock);
+const rofilnaNewSystem = new TimeSystem("ロフィルナ新暦", rofilnaCalendar, rofilnaClock);
+
+
 const gsvClockTranslator = new ClockTranslator([
 	{clock: sinteeaClock, factor: 1.23819931, reference: earthClock},
 	{clock: gaalunClock, factor: 4.7956278515625, reference: earthClock},
-	{clock: lapeaClock, factor: 73458.81 / 76800, reference: earthClock}
+	{clock: lapeaClock, factor: 73458.81 / 76800, reference: earthClock},
+	{clock: rofilnaClock, factor: (31846851 - 0.3592156998724847) / 355 / 100, reference: earthClock}
 ]);
 
 export const gsvTranslator = new TimeSystemTranslator([
@@ -169,6 +194,10 @@ export const gsvTranslator = new TimeSystemTranslator([
 	], [
 		{system: sinteeaSystem, date: [1707, 6, 10], time: [11, 31, 26]},
 		{system: lapeaSystem, date: [3672, 3, 14], time: [0, 0, 0]},
+	], [
+		{system: sinteeaSystem, date: [1312, 16, 14], time: [17, 21, 10]},
+		{system: rofilnaOldSystem, date: [6175, 4, 28], time: [38]},
+		{system: rofilnaNewSystem, date: [1, 4, 28], time: [38]},
 	]
 ], gsvClockTranslator);
 
@@ -176,5 +205,7 @@ export const gsvTimeSystems = [
 	sinteeaSystem,
 	gaalunSystem,
 	gregorianSystem,
-	lapeaSystem
+	lapeaSystem,
+	rofilnaNewSystem,
+	rofilnaOldSystem
 ];
