@@ -5,7 +5,6 @@ import {ClockTranslator} from "./clock-translator";
 import {TimeSystemTranslator} from "./time-system-translator";
 
 const sinteeaCalendar = new Calendar({
-	name: "シンテーア暦",
 	year: "年",
 	middleUnits: [
 		{name: "月", count: 16, start: 1}
@@ -40,11 +39,10 @@ const sinteeaClock = new Clock([
 	{name: "秒", count: 72},
 ]);
 
-const sinteeaSystem = new TimeSystem(sinteeaCalendar, sinteeaClock);
+const sinteeaSystem = new TimeSystem("シンテーア暦", sinteeaCalendar, sinteeaClock);
 
 
 const gaalunCalendar = new Calendar({
-	name: "ガールン暦",
 	year: "年",
 	middleUnits: [
 		{name: "月", count: 8, start: 1,
@@ -79,11 +77,10 @@ const gaalunClock = new Clock([
 	{name: "秒", count: 64, start: 1},
 ]);
 
-const gaalunSystem = new TimeSystem(gaalunCalendar, gaalunClock);
+const gaalunSystem = new TimeSystem("ガールン暦", gaalunCalendar, gaalunClock);
 
 
 const gregorianCalendar = new Calendar({
-	name: "グレゴリオ暦",
 	year: "年",
 	middleUnits: [
 		{name: "月", count: 12, start: 1}
@@ -116,11 +113,10 @@ const earthClock = new Clock([
 	{name: "秒", count: 60},
 ]);
 
-const gregorianSystem = new TimeSystem(gregorianCalendar, earthClock);
+const gregorianSystem = new TimeSystem("グレゴリオ暦", gregorianCalendar, earthClock);
 
 
 const lapeaCalendar = new Calendar({
-	name: "ラペア暦",
 	year: "年",
 	middleUnits: [
 		{name: "月", count: 9, start: 0},
@@ -154,7 +150,7 @@ const lapeaClock = new Clock([
 	{name: "秒", count: 64},
 ]);
 
-const lapeaSystem = new TimeSystem(lapeaCalendar, lapeaClock);
+const lapeaSystem = new TimeSystem("ラペア暦", lapeaCalendar, lapeaClock);
 
 
 const gsvClockTranslator = new ClockTranslator([

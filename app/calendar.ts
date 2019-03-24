@@ -7,7 +7,6 @@ import NumberFormat, {formatNumber} from "./number-format";
  */
 
 interface CalendarConfig {
-	name: string;
 	year: string;
 	middleUnits: UnitConfig[];
 	day: DayUnitConfig;
@@ -89,7 +88,6 @@ interface UnitInfoPeriod {
 }
 
 export default class Calendar {
-	public readonly name: string;
 	public readonly unitNum: number;
 	public readonly unitsName: string[];
 	public readonly hasDayOfWeek: boolean = false;
@@ -110,7 +108,6 @@ export default class Calendar {
 	private unitInfoByLeapIndex: Map<number, UnitInfo> = new Map();
 
 	constructor(config: CalendarConfig) {
-		this.name = config.name;
 		this.middleUnits = config.middleUnits;
 		this.dayUnit = config.day;
 		this.week = config.week;

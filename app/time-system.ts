@@ -2,7 +2,11 @@ import Calendar from "./calendar";
 import Clock from "./clock";
 
 export default class TimeSystem {
-	constructor(public calendar: Calendar, public clock: Clock) {}
+	constructor(
+		public readonly name: string,
+		public readonly calendar: Calendar,
+		public readonly clock: Clock
+	) {}
 
 	dateTimeToSeconds(date: number[], time: number[]): number {
 		return this.calendar.dateToDays(date) * this.clock.secondsOfDay

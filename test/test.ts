@@ -25,7 +25,6 @@ describe("Calendar", function () {
 
 	describe("Simple Calendar", function() {
 		const simpleCalendar = new Calendar({
-			name: "Simple Calendar",
 			year: "year",
 			middleUnits: [
 				{name: "month", count: 12, start: 1},
@@ -45,7 +44,6 @@ describe("Calendar", function () {
 
 	describe("Complex Calendar", function() {
 		const complexCalendar = new Calendar({
-			name: "Complex Calendar",
 			year: "year",
 			middleUnits: [
 				{name: "month", count: 12, start: 1},
@@ -73,7 +71,6 @@ describe("Calendar", function () {
 
 	describe("Simple Calendar with Leap Years", function() {
 		const leapCalendar = new Calendar({
-			name: "Simple Calendar with Leap Years",
 			year: "year",
 			middleUnits: [
 				{name: "month", count: 12, start: 1},

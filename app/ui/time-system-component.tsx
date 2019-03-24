@@ -104,7 +104,7 @@ export default class TimeSystemComponent extends React.PureComponent<TimeSystemC
 
 		let timeIsValid = clock.isValidTime(this.props.time);
 
-		const title = <span className="calendar-title">{calendar.name}: {dateTimeText}</span>;
+		const title = <span className="calendar-title">{this.props.timeSystem.name}: {dateTimeText}</span>;
 
 		if (this.state.collapsed) {
 			return (<div>
