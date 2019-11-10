@@ -1,5 +1,6 @@
 import Clock from "./clock";
 
+// 1s of clock = factor * 1s of reference
 interface ClockTranslatorConfig {
 	clock: Clock;
 	factor: number;

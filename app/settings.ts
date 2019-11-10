@@ -178,12 +178,57 @@ const rofilnaClock = new Clock([
 const rofilnaOldSystem = new TimeSystem("ロフィルナ旧暦", rofilnaCalendar, rofilnaClock);
 const rofilnaNewSystem = new TimeSystem("ロフィルナ新暦", rofilnaCalendar, rofilnaClock);
 
+const eoruiszCalendar = new Calendar({
+	year: "年",
+	middleUnits: [
+		{name: "季", count: 4, start: 1}
+	],
+	day: {
+		name: "日", count: 55, start: 1,
+		modify: [
+			{matchMiddle: [3], count: 56},
+			{yearMod: 2, matchMiddle: [1], count: 56},
+			{yearMod: 100, yearOffset: 0, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 12, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 24, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 36, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 48, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 60, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 72, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 84, matchMiddle: [2], count: 56},
+			{yearMod: 100, yearOffset: 96, matchMiddle: [2], count: 56},
+		],
+	},
+	week: {
+		name: "曜日",
+		custom: (date: number[]) => {
+			const d = date[2];
+			if (d == 56) {
+				return 12;
+			}
+			return (d - 1) % 11 + 1;
+		},
+		start: 1,
+		max: 12,
+		customFormat: ["日", "火", "石", "金", "海", "地", "雪", "木", "青", "雲", "氷", "暗"]
+	}
+});
+
+const eoruiszClock = new Clock([
+	{name: "時", count: 20},
+	{name: "分", count: 100},
+	{name: "秒", count: 100}
+]);
+
+const eoruiszSystem = new TimeSystem("オーリス暦", eoruiszCalendar, eoruiszClock);
+
 
 const gsvClockTranslator = new ClockTranslator([
 	{clock: sinteeaClock, factor: 1.23819931, reference: earthClock},
 	{clock: gaalunClock, factor: 4.7956278515625, reference: earthClock},
 	{clock: lapeaClock, factor: 73458.81 / 76800, reference: earthClock},
-	{clock: rofilnaClock, factor: (31846851 - 0.3592156998724847) / 355 / rofilnaClock.secondsOfDay, reference: earthClock}
+	{clock: rofilnaClock, factor: (31846851 - 0.3592156998724847) / 355 / rofilnaClock.secondsOfDay, reference: earthClock},
+	{clock: eoruiszClock, factor: 0.52993266, reference: earthClock}
 ]);
 
 export const gsvTranslator = new TimeSystemTranslator([
@@ -200,6 +245,9 @@ export const gsvTranslator = new TimeSystemTranslator([
 		{system: sinteeaSystem, date: [1312, 16, 14], time: [17, 21, 10]},
 		{system: rofilnaOldSystem, date: [6175, 4, 28], time: [9, 40, 0]},
 		{system: rofilnaNewSystem, date: [1, 4, 28], time: [9, 40, 0]},
+	], [
+		{system: sinteeaSystem, date: [0, 1, 1], time: [0, 0, 0]},
+		{system: eoruiszSystem, date: [1033, 1, 45], time: [6, 13, 4]}
 	]
 ], gsvClockTranslator);
 
@@ -209,5 +257,6 @@ export const gsvTimeSystems = [
 	gregorianSystem,
 	lapeaSystem,
 	rofilnaNewSystem,
-	rofilnaOldSystem
+	rofilnaOldSystem,
+	eoruiszSystem
 ];
