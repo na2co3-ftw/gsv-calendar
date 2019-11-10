@@ -106,4 +106,35 @@ describe("Calendar", function () {
 		testNotValid(leapCalendar, [15, 2, 1, 8]);
 		testValid(leapCalendar, [35, 4, 1, 10]);
 	});
+
+	describe("Simple Calendar with Offset Leap Years", function() {
+		const offsetLeapCalendar = new Calendar({
+			year: "year",
+			middleUnits: [
+				{name: "month", count: 12, start: 1},
+				{name: "week", count: 4, start: 1}
+			],
+			day: {
+				name: "day", count: 7, start: 1,
+				modify: [
+					{yearMod: 5, matchMiddle: [2, 1], count:8},
+					{yearMod: 5, yearOffset: 1, matchMiddle: [3, 1], count:9},
+					{yearMod: 4, matchMiddle: [4, 1], count:10},
+				]
+			}
+		});
+		testDateAndDays(offsetLeapCalendar, [1, 1, 1, 1], 12*4*7+4);
+		testDateAndDays(offsetLeapCalendar, [1, 3, 1, 9], 12*4*7+2*4*7+8+4);
+		testDateAndDays(offsetLeapCalendar, [1, 3, 2, 1], 12*4*7+2*4*7+7+6);
+		testDateAndDays(offsetLeapCalendar, [6, 1, 1, 1], 6*12*4*7+10);
+		testDateAndDays(offsetLeapCalendar, [6, 3, 1, 9], 6*12*4*7+2*4*7+8+10);
+		testDateAndDays(offsetLeapCalendar, [6, 3, 2, 1], 6*12*4*7+2*4*7+7+12);
+		testDateAndDays(offsetLeapCalendar, [21, 1, 1, 1], 21*12*4*7+31);
+		testDateAndDays(offsetLeapCalendar, [21, 3, 1, 9], 21*12*4*7+2*4*7+8+31);
+		testDateAndDays(offsetLeapCalendar, [21, 3, 2, 1], 21*12*4*7+2*4*7+7+33);
+		testNotValid(offsetLeapCalendar, [0, 3, 1, 8]);
+		testValid(offsetLeapCalendar, [1, 3, 1, 9]);
+		testNotValid(offsetLeapCalendar, [20, 3, 1, 8]);
+		testValid(offsetLeapCalendar, [21, 3, 1, 9]);
+	});
 });

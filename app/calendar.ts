@@ -30,6 +30,7 @@ interface DayUnitConfig {
 
 interface DayUnitModify {
 	yearMod?: number;
+	yearOffset?: number;
 	matchMiddle: number[];
 	count?: number;
 	start?: number;
@@ -101,7 +102,7 @@ export default class Calendar {
 	private hasModifiedDayUnitStart: boolean = false;
 	private week: WeekConfig | undefined;
 
-	private yearMods: number[] = [];
+	private yearMods: {yearMod: number, yearOffset?: number}[] = [];
 	private leapCycleYears: number;
 	private leapCycleDays: number;
 	private yearInCycleOffsetDays: number[] = [];
@@ -132,12 +133,12 @@ export default class Calendar {
 					this.hasModifiedDayUnitStart = true;
 				}
 				if (typeof mod.yearMod == "undefined") continue;
-				this.yearMods.push(mod.yearMod);
+				this.yearMods.push({yearMod: mod.yearMod, yearOffset: mod.yearOffset});
 				this.leapCycleYears = lcm(this.leapCycleYears, mod.yearMod);
 			}
 		}
 
-		this.getRootUnitInfo = memoize(this.getRootUnitInfo.bind(this), this.getLeapIndex.bind(this));
+		this.getRootUnitInfo = memoize(this.getRootUnitInfo.bind(this), this.getLeapHash.bind(this));
 
 		let offsetDays = 0;
 		for (let yearInCycle = 0; yearInCycle < this.leapCycleYears; yearInCycle++) {
@@ -147,14 +148,16 @@ export default class Calendar {
 		this.leapCycleDays = offsetDays;
 	}
 
-	private getLeapIndex(year: number): number {
-		let leapIndex = 1;
-		for (const mod of this.yearMods) {
-			if (year % mod == 0) {
-				leapIndex = lcm(leapIndex, mod);
+	private getLeapHash(year: number): string {
+		let leapHash = "";
+		for (const {yearMod, yearOffset} of this.yearMods) {
+			if (year % yearMod == (yearOffset ?? 0)) {
+				leapHash += "1";
+			} else {
+				leapHash += "0";
 			}
 		}
-		return leapIndex;
+		return leapHash;
 	}
 
 	private getRootUnitInfo(yearInCycle: number) {
@@ -191,7 +194,7 @@ export default class Calendar {
 			const middle = date.slice(1, this.middleUnits.length + 1);
 			for (const mod of this.dayUnit.modify) {
 				if (typeof mod.yearMod != "undefined") {
-					if (year % mod.yearMod != 0) continue;
+					if (year % mod.yearMod != (mod.yearOffset ?? 0)) continue;
 				}
 				if (isEqual(mod.matchMiddle, middle)) {
 					if (typeof mod.count != "undefined") {
