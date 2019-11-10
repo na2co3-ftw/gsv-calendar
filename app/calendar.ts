@@ -1,5 +1,6 @@
 import isEqual from "lodash.isequal";
 import NumberFormat, {formatNumber} from "./number-format";
+import {memoize} from "./moemize";
 
 /*
  * Unit: year, month, day, and other components of the calendar
@@ -105,8 +106,6 @@ export default class Calendar {
 	private leapCycleDays: number;
 	private yearInCycleOffsetDays: number[] = [];
 
-	private unitInfoByLeapIndex: Map<number, UnitInfo> = new Map();
-
 	constructor(config: CalendarConfig) {
 		this.middleUnits = config.middleUnits;
 		this.dayUnit = config.day;
@@ -138,19 +137,28 @@ export default class Calendar {
 			}
 		}
 
+		this.getRootUnitInfo = memoize(this.getRootUnitInfo.bind(this), this.getLeapIndex.bind(this));
+
 		let offsetDays = 0;
 		for (let yearInCycle = 0; yearInCycle < this.leapCycleYears; yearInCycle++) {
 			this.yearInCycleOffsetDays[yearInCycle] = offsetDays;
-
-			const leapIndex = this.getLeapIndex(yearInCycle);
-			let unitInfo = this.unitInfoByLeapIndex.get(leapIndex);
-			if (typeof unitInfo == "undefined") {
-				unitInfo = this.generateUnitInfo(0, [], yearInCycle);
-				this.unitInfoByLeapIndex.set(leapIndex, unitInfo);
-			}
-			offsetDays += unitInfo.days;
+			offsetDays += this.getRootUnitInfo(yearInCycle).days;
 		}
 		this.leapCycleDays = offsetDays;
+	}
+
+	private getLeapIndex(year: number): number {
+		let leapIndex = 1;
+		for (const mod of this.yearMods) {
+			if (year % mod == 0) {
+				leapIndex = lcm(leapIndex, mod);
+			}
+		}
+		return leapIndex;
+	}
+
+	private getRootUnitInfo(yearInCycle: number) {
+		return this.generateUnitInfo(0, [], yearInCycle);
 	}
 
 	private generateUnitInfo(i: number, middle: number[], year: number): UnitInfo {
@@ -198,16 +206,6 @@ export default class Calendar {
 		return {count, start};
 	}
 
-	private getLeapIndex(year: number): number {
-		let leapIndex = 1;
-		for (const mod of this.yearMods) {
-			if (year % mod == 0) {
-				leapIndex = lcm(leapIndex, mod);
-			}
-		}
-		return leapIndex;
-	}
-
 	dateToDays(date: number[]): number {
 		if (date.length != this.unitNum) throw "!";
 
@@ -217,8 +215,7 @@ export default class Calendar {
 		let days = cycle * this.leapCycleDays;
 		days += this.yearInCycleOffsetDays[yearInCycle];
 
-		const leapIndex = this.getLeapIndex(yearInCycle);
-		let periods = this.unitInfoByLeapIndex.get(leapIndex)!.periods;
+		let periods = this.getRootUnitInfo(yearInCycle).periods;
 		for (let i = 0; i < this.middleUnits.length; i++) {
 			const val = date[i + 1] - this.middleUnits[i].start;
 			days += periods[val].offsetDays;
@@ -246,8 +243,7 @@ export default class Calendar {
 		date[0] += yearInCycle;
 		days -= this.yearInCycleOffsetDays[yearInCycle];
 
-		const leapIndex = this.getLeapIndex(yearInCycle);
-		let periods = this.unitInfoByLeapIndex.get(leapIndex)!.periods;
+		let periods = this.getRootUnitInfo(yearInCycle).periods;
 		for (let i = 0; i < this.middleUnits.length; i++) {
 			let val = 1;
 			for (; val < periods.length; val++) {
