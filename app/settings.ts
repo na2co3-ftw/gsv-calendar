@@ -223,12 +223,49 @@ const eoruiszClock = new Clock([
 const eoruiszSystem = new TimeSystem("オーリス暦", eoruiszCalendar, eoruiszClock);
 
 
+const norfiskeatCalendar = new Calendar({
+	year: "年",
+	middleUnits: [
+		{name: "永", count: 13, start: 1},
+	],
+	day: {
+		name: "日", count: 32, start: 1,
+		modify: [
+			{yearMod: 5, matchMiddle: [12], count: 33},
+			{yearMod: 5, matchMiddle: [13], count: 33},
+		],
+	},
+	week: {
+		name: "曜日",
+		custom: (date: number[]) => {
+			const d = date[2];
+			if (d == 33) {
+				return date[1] == 12 ? 9 : 10;
+			}
+			return (d - 1) % 8 + 1;
+		},
+		start: 1,
+		max: 10,
+		customFormat: ["風", "花", "雪", "杜", "永", "波", "白", "瑞", "万", "創"]
+	}
+});
+
+const norfiskeatClock = new Clock([
+	{name: "時", count: 26},
+	{name: "分", count: 70},
+	{name: "秒", count: 50}
+]);
+
+const norfiskeatSystem = new TimeSystem("双子暦", norfiskeatCalendar, norfiskeatClock);
+
+
 const gsvClockTranslator = new ClockTranslator([
 	{clock: sinteeaClock, factor: 1.23819931, reference: earthClock},
 	{clock: gaalunClock, factor: 4.7956278515625, reference: earthClock},
 	{clock: lapeaClock, factor: 73458.81 / 76800, reference: earthClock},
 	{clock: rofilnaClock, factor: (31846851 - 0.3592156998724847) / 355 / rofilnaClock.secondsOfDay, reference: earthClock},
-	{clock: eoruiszClock, factor: 0.52993266, reference: earthClock}
+	{clock: eoruiszClock, factor: 0.52993266, reference: earthClock},
+	{clock: norfiskeatClock, factor: 1.4753, reference: earthClock}
 ]);
 
 export const gsvTranslator = new TimeSystemTranslator([
@@ -248,6 +285,9 @@ export const gsvTranslator = new TimeSystemTranslator([
 	], [
 		{system: sinteeaSystem, date: [0, 1, 1], time: [0, 0, 0]},
 		{system: eoruiszSystem, date: [1033, 1, 45], time: [6, 13, 4]}
+	], [
+		{system: sinteeaSystem, date: [0, 1, 1], time: [0, 0, 0]},
+		{system: norfiskeatSystem, date: [600, 9, 11], time: [0, 64, 0]}
 	]
 ], gsvClockTranslator);
 
@@ -258,5 +298,6 @@ export const gsvTimeSystems = [
 	lapeaSystem,
 	rofilnaNewSystem,
 	rofilnaOldSystem,
-	eoruiszSystem
+	eoruiszSystem,
+	norfiskeatSystem
 ];
