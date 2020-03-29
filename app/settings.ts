@@ -286,8 +286,8 @@ export const gsvTranslator = new TimeSystemTranslator([
 		{system: sinteeaSystem, date: [0, 1, 1], time: [0, 0, 0]},
 		{system: eoruiszSystem, date: [1033, 1, 45], time: [6, 13, 4]}
 	], [
-		{system: sinteeaSystem, date: [0, 1, 1], time: [0, 0, 0]},
-		{system: norfiskeatSystem, date: [600, 9, 11], time: [0, 64, 0]}
+		{system: sinteeaSystem, date: [1700, 1, 1], time: [0, 0, 0]},
+		{system: norfiskeatSystem, date: [2300, 3, 16], time: [0, 64, 0]}
 	]
 ], gsvClockTranslator);
 
